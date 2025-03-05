@@ -21,7 +21,7 @@
    - **Firefox:** [Tampermonkey](https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/) or [Violentmonkey](https://addons.mozilla.org/en-US/firefox/addon/violentmonkey/).  
 
 2. **Add the FMHY SafeLink Guard Script**  
-   - Open the script’s [hostig page](https://greasyfork.org/en/scripts/528660-fmhy-safelink-guard) (Greasy Fork)  
+   - Open the script’s [hosting page](https://greasyfork.org/en/scripts/528660-fmhy-safelink-guard) (Greasy Fork)  
    - Click **Install** or **Import** to add it to your user script manager.  
 
 3. **Verify Activation**  
