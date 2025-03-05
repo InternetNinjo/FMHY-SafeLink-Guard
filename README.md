@@ -33,6 +33,9 @@
 2. **Look for Warnings:** Any domain matching the FMHY sitelist is flagged by a `⚠️ FMHY Unsafe Site` badge.  
 3. **Proceed Carefully:** If you see the warning badge, think twice before clicking, or at least do further research.  
 4. **Stay Current:** The script automatically retrieves the most recent domain data each time.
+5. **Example:**
+
+   ![image](https://github.com/user-attachments/assets/94236313-353e-4f4f-a22b-d4e8365531a1)
 
 ## Advanced Tips
 
