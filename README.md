@@ -7,7 +7,7 @@ Uses the latest FMHY filterlist, fetching fresh data on every run.
 Displays a prominent red warning badge (⚠️ FMHY Unsafe Site) next to flagged links.
 Includes a MutationObserver to track pages that load content dynamically, ensuring new links don’t go unnoticed.
 
-# Why Use It?
+Why Use It?
 
 Proactive Protection: Alerts you before you even consider clicking a suspicious site.
 Automatic Updates: Pulls the domain blacklist directly from FMHY’s GitHub, so you’re always current.
