@@ -1,10 +1,10 @@
 # FMHY-SafeLink-Guard
 
-**FMHY SafeLink Guard** keeps a lookout for potentially harmful or scammy links on any website you visit. Drawing on the up-to-date FMHY filterlist, it flags these links directly on the webpage, enabling you to spot suspicious domains at a glance and steer clear of trouble.
+**FMHY SafeLink Guard** keeps a lookout for potentially harmful or scammy links on any website you visit. Drawing on the up-to-date FMHY sitelist, it flags these links directly on the webpage, enabling you to spot suspicious domains at a glance and steer clear of trouble.
 
 ## Key Features
 
-- **Fresh Data:** Uses the latest FMHY filterlist, fetching updates on every run.  
+- **Fresh Data:** Uses the latest FMHY sitelist, fetching updates on every run.  
 - **Visual Warning:** Displays a prominent red warning badge `⚠️ FMHY Unsafe Site` next to flagged links.  
 - **Dynamic Content Support:** Includes a MutationObserver to track pages that load content dynamically, ensuring newly added links don’t go unnoticed.
 
@@ -30,13 +30,13 @@
 ## Usage
 
 1. **Browse as Usual:** The script inspects every link in real time.  
-2. **Look for Warnings:** Any domain matching the FMHY filterlist is flagged by a `⚠️ FMHY Unsafe Site` badge.  
+2. **Look for Warnings:** Any domain matching the FMHY sitelist is flagged by a `⚠️ FMHY Unsafe Site` badge.  
 3. **Proceed Carefully:** If you see the warning badge, think twice before clicking, or at least do further research.  
 4. **Stay Current:** The script automatically retrieves the most recent domain data each time.
 
 ## Advanced Tips
 
-- **Console Insight:** Check your browser’s console for details on how many domains were loaded in the filterlist.  
+- **Console Insight:** Check your browser’s console for details on how many domains were loaded in the sitelist.  
 - **Customization:** If you want to add or remove specific domains yourself, edit the code directly (look for `userAdditions` and `userRemovals` arrays).
 
 ## Compatibility
@@ -51,7 +51,7 @@
 
 ## Disclaimer
 
-FMHY SafeLink Guard uses the FMHY filterlist as its data source and cannot guarantee absolute protection against every malicious or phishing site. Always use sound judgment when visiting unfamiliar URLs. The author and contributors assume no liability for any damages or losses incurred while using this script.
+FMHY SafeLink Guard uses the FMHY sitelist as its data source and cannot guarantee absolute protection against every malicious or phishing site. Always use sound judgment when visiting unfamiliar URLs. The author and contributors assume no liability for any damages or losses incurred while using this script.
 
 ---
 
