@@ -21,7 +21,7 @@
    - **Firefox:** Tampermonkey or Violentmonkey.  
 
 2. **Add the FMHY SafeLink Guard Script**  
-   - Open the script’s hosting page (e.g., Greasy Fork)  
+   - Open the script’s [hostig page](https://greasyfork.org/en/scripts/528660-fmhy-safelink-guard) (Greasy Fork)  
    - Click **Install** or **Import** to add it to your user script manager.  
 
 3. **Verify Activation**  
@@ -30,7 +30,7 @@
 ## Usage
 
 1. **Browse as Usual:** The script inspects every link in real time.  
-2. **Look for Warnings:** Any domain matching the FMHY filterlist is flagged by a ⚠️ **FMHY Unsafe Site** badge.  
+2. **Look for Warnings:** Any domain matching the FMHY filterlist is flagged by a `⚠️ **FMHY Unsafe Site**` badge.  
 3. **Proceed Carefully:** If you see the warning badge, think twice before clicking, or at least do further research.  
 4. **Stay Current:** The script automatically retrieves the most recent domain data each time.
 
