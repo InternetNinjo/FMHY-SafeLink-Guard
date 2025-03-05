@@ -1,53 +1,58 @@
 # FMHY-SafeLink-Guard
-FMHY SafeLink Guard keeps a lookout for potentially harmful or scammy links on any website you visit. Drawing on the up-to-date FMHY filterlist, it flags these links directly on the webpage, enabling you to spot suspicious domains at a glance and steer clear of trouble.
 
-Key Features
+**FMHY SafeLink Guard** keeps a lookout for potentially harmful or scammy links on any website you visit. Drawing on the up-to-date FMHY filterlist, it flags these links directly on the webpage, enabling you to spot suspicious domains at a glance and steer clear of trouble.
 
-Uses the latest FMHY filterlist, fetching fresh data on every run.
-Displays a prominent red warning badge (⚠️ FMHY Unsafe Site) next to flagged links.
-Includes a MutationObserver to track pages that load content dynamically, ensuring new links don’t go unnoticed.
+## Key Features
 
-Why Use It?
+- **Fresh Data:** Uses the latest FMHY filterlist, fetching updates on every run.  
+- **Visual Warning:** Displays a prominent red warning badge (⚠️ **FMHY Unsafe Site**) next to flagged links.  
+- **Dynamic Content Support:** Includes a MutationObserver to track pages that load content dynamically, ensuring newly added links don’t go unnoticed.
 
-Proactive Protection: Alerts you before you even consider clicking a suspicious site.
-Automatic Updates: Pulls the domain blacklist directly from FMHY’s GitHub, so you’re always current.
-Low Maintenance: Installs once and operates quietly in the background.
+## Why Use It?
 
-Installation
+- **Proactive Protection:** Alerts you before you even consider clicking a suspicious site.  
+- **Automatic Updates:** Pulls the domain blacklist directly from FMHY’s GitHub, so you’re always current.  
+- **Low Maintenance:** Installs once and operates quietly in the background.
 
-Install a User Script Manager
-        Chrome: Try Tampermonkey.
-        Firefox: Use either Tampermonkey or Violentmonkey.
-Add the FMHY SafeLink Guard Script
-        Open the script’s hosting page (for instance, Greasy Fork) and select Install or Import to add it to your user script manager.
-Verify Activation
-        Your user script manager interface should confirm that “FMHY SafeLink Guard” is running.
+## Installation
 
-Usage
+1. **Install a User Script Manager**  
+   - **Chrome:** Tampermonkey (recommended).  
+   - **Firefox:** Tampermonkey or Violentmonkey.  
 
-Browse as Usual: The script inspects every link in real time.
-Look for Warnings: Any domain matching the FMHY filterlist is flagged by a ⚠️ FMHY Unsafe Site badge.
-Proceed Carefully: If you see the warning badge, think twice before clicking, or at least do further research.
-Stay Current: The script automatically retrieves the most recent domain data each time.
+2. **Add the FMHY SafeLink Guard Script**  
+   - Open the script’s hosting page (e.g., Greasy Fork)  
+   - Click **Install** or **Import** to add it to your user script manager.  
 
-Advanced Tips
+3. **Verify Activation**  
+   - Check your user script manager’s dashboard to confirm “FMHY SafeLink Guard” is running.
 
-Console Insight: Check your browser’s console for details on how many domains were loaded in the filterlist.
-Customization: If you want to add or remove specific domains yourself, you can edit the code directly.
+## Usage
 
-Compatibility
+1. **Browse as Usual:** The script inspects every link in real time.  
+2. **Look for Warnings:** Any domain matching the FMHY filterlist is flagged by a ⚠️ **FMHY Unsafe Site** badge.  
+3. **Proceed Carefully:** If you see the warning badge, think twice before clicking, or at least do further research.  
+4. **Stay Current:** The script automatically retrieves the most recent domain data each time.
 
-Works on modern browsers like Chrome, Firefox, and Edge with a user script manager installed.
-Tested primarily with Tampermonkey and Violentmonkey.
+## Advanced Tips
 
-Known Constraints
+- **Console Insight:** Check your browser’s console for details on how many domains were loaded in the filterlist.  
+- **Customization:** If you want to add or remove specific domains yourself, edit the code directly (look for `userAdditions` and `userRemovals` arrays).
 
-On sites with frequent dynamic content updates, you might briefly see links before they are flagged. The MutationObserver usually handles them quickly.
-Performance remains smooth for most use cases, though extremely large or complex pages may cause a minor slowdown.
+## Compatibility
 
-# Disclaimer
+- Works on modern browsers (Chrome, Firefox, Edge) with a user script manager installed.  
+- Tested primarily with **Tampermonkey** and **Violentmonkey**.
 
+## Known Constraints
+
+- On sites with frequent dynamic content updates, you might briefly see links before they’re flagged. The **MutationObserver** usually handles them quickly.  
+- Performance remains smooth for most use cases, though extremely large or complex pages may cause a minor slowdown.
+
+## Disclaimer
 
 FMHY SafeLink Guard uses the FMHY filterlist as its data source and cannot guarantee absolute protection against every malicious or phishing site. Always use sound judgment when visiting unfamiliar URLs. The author and contributors assume no liability for any damages or losses incurred while using this script.
 
-Secure your browsing with FMHY SafeLink Guard!
+---
+
+Secure your browsing with **FMHY SafeLink Guard**!
