@@ -1,11 +1,14 @@
 // ==UserScript==
 // @name         FMHY SafeLink Guard
 // @namespace    http://tampermonkey.net/
-// @version      0.4.2
-// @description  Warns about unsafe/scammy links based on FMHY filterlist, but only once per domain
+// @version      0.5.1
+// @description  Warns about unsafe/scammy links based on FMHY filterlist
 // @author       maxikozie
 // @match        *://*/*
 // @grant        GM_xmlhttpRequest
+// @grant        GM_registerMenuCommand
+// @grant        GM_setValue
+// @grant        GM_getValue
 // @connect      raw.githubusercontent.com
 // @run-at       document-end
 // @license      MIT
@@ -17,33 +20,22 @@
 (function() {
     'use strict';
 
-    // ------------------------------------------------------------------------
-    // 1) URL of the raw text version of the FMHY GitHub filterlist.
-    // ------------------------------------------------------------------------
-    const filterlistUrl = 'https://raw.githubusercontent.com/fmhy/FMHYFilterlist/refs/heads/main/sitelist.txt';
+    const unsafeListUrl = 'https://raw.githubusercontent.com/fmhy/FMHYFilterlist/refs/heads/main/sitelist.txt';
+    const safeListUrl = 'https://raw.githubusercontent.com/fmhy/bookmarks/refs/heads/main/fmhy_in_bookmarks.html';
 
-    // ------------------------------------------------------------------------
-    // 2) We'll store unsafe domains in a Set for fast lookups.
-    // ------------------------------------------------------------------------
-    window.unsafeDomains = new Set();
+    const unsafeDomains = new Set();
+    const safeDomains = new Set();
 
-    // ------------------------------------------------------------------------
-    // 3) Custom user additions/removals (applied AFTER the FMHY list loads).
-    // ------------------------------------------------------------------------
-    const userAdditions = [ /* e.g. "extrabadexample.com" */ ];
-    const userRemovals  = [ /* e.g. "siteyoudotrust.com"   */ ];
+    const userAdditions = [];
+    const userRemovals = [];
 
-    // ------------------------------------------------------------------------
-    // 4) We'll still keep track of individual links we’ve processed
-    //    (so we don’t repeatedly check the same <a> in dynamic content).
-    //    BUT we also track which domains have ALREADY been flagged once.
-    // ------------------------------------------------------------------------
     const processedLinks = new WeakSet();
-    const flaggedDomains = new Set(); // once we warn for a domain, we skip it thereafter
+    const highlightedUnsafeCounts = new Map();
+    const highlightedSafeCounts = new Map();
 
-    // ------------------------------------------------------------------------
-    // 5) Style for the warning badge.
-    // ------------------------------------------------------------------------
+    const trustedGlow = '0 0 4px #32cd32';
+    const unsafeGlow = '0 0 4px #ff4444';
+
     const warningStyle = `
         background-color: #ff0000;
         color: #fff;
@@ -55,84 +47,113 @@
         z-index: 9999;
     `;
 
-    // ------------------------------------------------------------------------
-    // 6) Initiate the fetching of the filterlist.
-    // ------------------------------------------------------------------------
-    fetchFilterlist();
+    // Load settings
+    let settings = {
+        highlightTrusted: GM_getValue('highlightTrusted', true),
+        highlightUntrusted: GM_getValue('highlightUntrusted', true),
+        highlightWarningBanners: GM_getValue('highlightWarningBanners', true) // NEW TOGGLES
+    };
 
-    function fetchFilterlist() {
+    // Register settings menu
+    GM_registerMenuCommand('⚙️ FMHY SafeLink Guard Settings', openSettingsPanel);
+
+    fetchUnsafeDomains();
+
+    function fetchUnsafeDomains() {
         GM_xmlhttpRequest({
-            method: "GET",
-            url: filterlistUrl,
-            onload: function(response) {
-                parseFilterlist(response.responseText);
+            method: 'GET',
+            url: unsafeListUrl,
+            onload: response => {
+                parseDomainList(response.responseText, unsafeDomains);
                 applyUserCustomDomains();
-                markLinksIn(document.body);
-                observePageChanges();
+                fetchSafeDomains();
             },
-            onerror: function() {
-                console.error('[FMHY SafeLink Guard] Failed to fetch filterlist');
+            onerror: () => {
+                console.error('[FMHY Guard] Failed to fetch unsafe list');
+                fetchSafeDomains();
             }
         });
     }
 
-    // ------------------------------------------------------------------------
-    // 7) Parse the FMHY filterlist and populate the unsafeDomains set.
-    // ------------------------------------------------------------------------
-	function parseFilterlist(rawText) {
-		const lines = rawText.split('\n');
-		for (const line of lines) {
-			const domain = line.trim();
-			if (domain && !domain.startsWith('!')) {  // Skip empty lines and comments
-				window.unsafeDomains.add(domain);
-			}
-		}
-		console.log(`[FMHY SafeLink Guard] Loaded ${window.unsafeDomains.size} domains from FMHY sitelist`);
-	}
-
-    // ------------------------------------------------------------------------
-    // 8) Apply user additions/removals, then log final domain count.
-    // ------------------------------------------------------------------------
-    function applyUserCustomDomains() {
-        for (const d of userAdditions) {
-            window.unsafeDomains.add(d);
-            console.log(`[FMHY SafeLink Guard] ADDED custom domain: '${d}'`);
-        }
-        for (const d of userRemovals) {
-            if (window.unsafeDomains.has(d)) {
-                window.unsafeDomains.delete(d);
-                console.log(`[FMHY SafeLink Guard] REMOVED domain: '${d}'`);
+    function fetchSafeDomains() {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: safeListUrl,
+            onload: response => {
+                parseSafeDomains(response.responseText);
+                markLinksIn(document.body);
+                observePageChanges();
+            },
+            onerror: () => {
+                console.error('[FMHY Guard] Failed to fetch safe list');
+                markLinksIn(document.body);
+                observePageChanges();
             }
-        }
-        console.log(`[FMHY SafeLink Guard] Final domain count: ${window.unsafeDomains.size}`);
+        });
     }
 
-    // ------------------------------------------------------------------------
-    // 9) markLinksIn: scans <a> tags in a container and flags them if needed.
-    //    BUT only place a warning for a domain once.
-    // ------------------------------------------------------------------------
+    function parseDomainList(text, targetSet) {
+        text.split('\n').forEach(line => {
+            const domain = line.trim();
+            if (domain && !domain.startsWith('!')) targetSet.add(domain.toLowerCase());
+        });
+    }
+
+    function applyUserCustomDomains() {
+        userAdditions.forEach(d => unsafeDomains.add(d.toLowerCase()));
+        userRemovals.forEach(d => unsafeDomains.delete(d.toLowerCase()));
+    }
+
+    function parseSafeDomains(html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        doc.querySelectorAll('a[href]').forEach(link => {
+            try {
+                safeDomains.add(normalizeDomain(new URL(link.href).hostname));
+            } catch (e) {}
+        });
+    }
+
+    const banneredDomains = new Set();
+
     function markLinksIn(container) {
         const links = container.querySelectorAll('a[href]');
         for (const link of links) {
-            if (processedLinks.has(link)) continue; // skip if we already processed this link
+            if (processedLinks.has(link)) continue;
             processedLinks.add(link);
 
-            const url = new URL(link.href, location.href);
-            if (isUnsafe(url.hostname)) {
-                // Normalize the domain by removing leading "www."
-                const normalized = normalizeDomain(url.hostname);
-                // If we haven't flagged this domain yet, do so now
-                if (!flaggedDomains.has(normalized)) {
-                    flaggedDomains.add(normalized);
+            const domain = normalizeDomain(new URL(link.href, location.href).hostname);
+
+            if (isUnsafe(domain)) {
+                // Show the banner only if enabled and once per domain
+                if (settings.highlightWarningBanners && !banneredDomains.has(domain)) {
                     addWarning(link);
+                    banneredDomains.add(domain);
+                }
+
+                // Highlight only if user wants
+                if (settings.highlightUntrusted && (highlightedUnsafeCounts.get(domain) || 0) < 2) {
+                    highlightUnsafeLink(link);
+                    highlightedUnsafeCounts.set(domain, (highlightedUnsafeCounts.get(domain) || 0) + 1);
+                }
+            } else if (settings.highlightTrusted && isSafe(domain)) {
+                if ((highlightedSafeCounts.get(domain) || 0) < 2) {
+                    highlightTrustedLink(link);
+                    highlightedSafeCounts.set(domain, (highlightedSafeCounts.get(domain) || 0) + 1);
                 }
             }
         }
     }
 
-    // ------------------------------------------------------------------------
-    // 10) Adds the warning badge after a link.
-    // ------------------------------------------------------------------------
+    function highlightTrustedLink(link) {
+        link.style.textShadow = trustedGlow;
+        link.style.fontWeight = 'bold';
+    }
+
+    function highlightUnsafeLink(link) {
+        link.style.textShadow = unsafeGlow;
+        link.style.fontWeight = 'bold';
+    }
+
     function addWarning(link) {
         const warning = document.createElement('span');
         warning.textContent = '⚠️ FMHY Unsafe Site';
@@ -140,41 +161,92 @@
         link.after(warning);
     }
 
-    // ------------------------------------------------------------------------
-    // 11) isUnsafe: checks if a hostname ends with any domain in unsafeDomains.
-    // ------------------------------------------------------------------------
-    function isUnsafe(hostname) {
-        hostname = hostname.replace(/^www\./, '');
-        for (const domain of window.unsafeDomains) {
-            if (hostname.endsWith(domain)) {
-                return true;
-            }
-        }
-        return false;
+    function isUnsafe(domain) {
+        return domainMatch(domain, unsafeDomains);
     }
 
-    // ------------------------------------------------------------------------
-    // 12) normalizeDomain: for “once per domain” checks, we can unify the domain
-    //    (e.g. remove “www.”).
-    // ------------------------------------------------------------------------
+    function isSafe(domain) {
+        return domainMatch(domain, safeDomains);
+    }
+
+    function domainMatch(domain, set) {
+        return [...set].some(d => domain === d || domain.endsWith('.' + d));
+    }
+
     function normalizeDomain(hostname) {
         return hostname.replace(/^www\./, '').toLowerCase();
     }
 
-    // ------------------------------------------------------------------------
-    // 13) observePageChanges: watches for newly inserted elements and flags as needed.
-    // ------------------------------------------------------------------------
     function observePageChanges() {
-        const observer = new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                        markLinksIn(node);
-                    }
+        new MutationObserver(mutations => {
+            for (const {addedNodes} of mutations) {
+                for (const node of addedNodes) {
+                    if (node.nodeType === Node.ELEMENT_NODE) markLinksIn(node);
                 }
             }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
+        }).observe(document.body, {childList: true, subtree: true});
     }
 
+    function openSettingsPanel() {
+        document.getElementById('fmhy-settings-panel')?.remove();
+
+        const panel = document.createElement('div');
+        panel.id = 'fmhy-settings-panel';
+        panel.style = `
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 99999; font-family: sans-serif; font-size: 14px;
+            background: #222; color: #f5f5f5; padding: 20px;
+            border: 1px solid #444; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            width: 320px;
+        `;
+
+        panel.innerHTML = `
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 10px;">
+                ⚙️ FMHY SafeLink Guard Settings
+            </div>
+
+            <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                <label>Highlight Trusted Domains</label>
+                <input type="checkbox" id="highlightTrusted">
+            </div>
+
+            <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                <label>Highlight Untrusted Domains</label>
+                <input type="checkbox" id="highlightUntrusted">
+            </div>
+
+            <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                <label>Show Warning Banners</label>
+                <input type="checkbox" id="highlightWarningBanners">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="saveSettings" style="
+                    background: #28a745; color: white; border: none; padding: 6px 12px;
+                    border-radius: 6px; cursor: pointer; font-weight: bold;">Save</button>
+                <button id="closeSettings" style="
+                    background: #dc3545; color: white; border: none; padding: 6px 12px;
+                    border-radius: 6px; cursor: pointer;">Close</button>
+            </div>
+        `;
+
+        document.body.appendChild(panel);
+
+        document.getElementById('highlightTrusted').checked = settings.highlightTrusted;
+        document.getElementById('highlightUntrusted').checked = settings.highlightUntrusted;
+        document.getElementById('highlightWarningBanners').checked = settings.highlightWarningBanners;
+
+        document.getElementById('saveSettings').onclick = () => {
+            settings.highlightTrusted = document.getElementById('highlightTrusted').checked;
+            settings.highlightUntrusted = document.getElementById('highlightUntrusted').checked;
+            settings.highlightWarningBanners = document.getElementById('highlightWarningBanners').checked;
+            GM_setValue('highlightTrusted', settings.highlightTrusted);
+            GM_setValue('highlightUntrusted', settings.highlightUntrusted);
+            GM_setValue('highlightWarningBanners', settings.highlightWarningBanners);
+            panel.remove();
+            location.reload();
+        };
+
+        document.getElementById('closeSettings').onclick = () => panel.remove();
+    }
 })();
