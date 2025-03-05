@@ -5,7 +5,7 @@
 ## Key Features
 
 - **Fresh Data:** Uses the latest FMHY filterlist, fetching updates on every run.  
-- **Visual Warning:** Displays a prominent red warning badge (⚠️ **FMHY Unsafe Site**) next to flagged links.  
+- **Visual Warning:** Displays a prominent red warning badge `⚠️ FMHY Unsafe Site` next to flagged links.  
 - **Dynamic Content Support:** Includes a MutationObserver to track pages that load content dynamically, ensuring newly added links don’t go unnoticed.
 
 ## Why Use It?
@@ -17,8 +17,8 @@
 ## Installation
 
 1. **Install a User Script Manager**  
-   - **Chrome:** Tampermonkey (recommended).  
-   - **Firefox:** Tampermonkey or Violentmonkey.  
+   - **Chrome:** [Tampermonkey](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) (recommended).  
+   - **Firefox:** [Tampermonkey](https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/) or [Violentmonkey](https://addons.mozilla.org/en-US/firefox/addon/violentmonkey/).  
 
 2. **Add the FMHY SafeLink Guard Script**  
    - Open the script’s [hostig page](https://greasyfork.org/en/scripts/528660-fmhy-safelink-guard) (Greasy Fork)  
@@ -30,7 +30,7 @@
 ## Usage
 
 1. **Browse as Usual:** The script inspects every link in real time.  
-2. **Look for Warnings:** Any domain matching the FMHY filterlist is flagged by a `⚠️ **FMHY Unsafe Site**` badge.  
+2. **Look for Warnings:** Any domain matching the FMHY filterlist is flagged by a `⚠️ FMHY Unsafe Site` badge.  
 3. **Proceed Carefully:** If you see the warning badge, think twice before clicking, or at least do further research.  
 4. **Stay Current:** The script automatically retrieves the most recent domain data each time.
 
