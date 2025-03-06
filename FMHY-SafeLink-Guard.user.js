@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FMHY SafeLink Guard
 // @namespace    http://tampermonkey.net/
-// @version      0.5.2
+// @version      0.5.3
 // @description  Warns about unsafe/scammy links based on FMHY filterlist
 // @author       maxikozie
 // @match        *://*/*
@@ -65,19 +65,28 @@
             url: unsafeListUrl,
             onload: response => {
                 parseDomainList(response.responseText, unsafeDomains);
-
+                console.log(`[FMHY Guard] Loaded ${unsafeDomains.size} unsafe domains from FMHY.`);
+    
                 GM_xmlhttpRequest({
                     method: 'GET',
                     url: safeListUrl,
                     onload: safeResp => {
                         parseSafeList(safeResp.responseText);
+                        console.log(`[FMHY Guard] Loaded ${safeDomains.size} safe domains from FMHY.`);
+    
                         applyUserOverrides();
                         processPage();
                     },
-                    onerror: processPage
+                    onerror: response => {
+                        console.error(`[FMHY Guard] Failed to fetch safe list from ${safeListUrl}`, response);
+                        processPage();
+                    }
                 });
             },
-            onerror: processPage
+            onerror: response => {
+                console.error(`[FMHY Guard] Failed to fetch unsafe list from ${unsafeListUrl}`, response);
+                processPage();
+            }
         });
     }
 
