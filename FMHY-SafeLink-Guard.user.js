@@ -20,6 +20,22 @@
 (function() {
     'use strict';
 
+    // Restrict script from running on domains owned by FMHY
+    const excludedDomains = [
+        'fmhy.net',
+        'fmhy.pages.dev',
+        'fmhy.lol',
+        'fmhy.vercel.app',
+        'fmhy.xyz'
+    ];
+
+    const currentDomain = window.location.hostname.toLowerCase();
+
+    if (excludedDomains.some(domain => currentDomain.endsWith(domain))) {
+        console.log(`[FMHY Guard] Script disabled on ${currentDomain}`);
+        return; // Completely stop the script if we're on an FMHY site
+    }
+
     // Remote sources for FMHY site lists
     const unsafeListUrl = 'https://raw.githubusercontent.com/fmhy/FMHYFilterlist/refs/heads/main/sitelist.txt';
     const safeListUrl   = 'https://raw.githubusercontent.com/fmhy/bookmarks/refs/heads/main/fmhy_in_bookmarks.html';
