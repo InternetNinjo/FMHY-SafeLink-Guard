@@ -33,7 +33,7 @@
 
     if (excludedDomains.some(domain => currentDomain.endsWith(domain))) {
         console.log(`[FMHY Guard] Script disabled on ${currentDomain}`);
-        return; // Completely stop the script if we're on an FMHY site
+        return;
     }
 
     // Remote sources for FMHY site lists
