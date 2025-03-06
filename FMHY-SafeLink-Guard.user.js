@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FMHY SafeLink Guard
 // @namespace    http://tampermonkey.net/
-// @version      0.5.3
+// @version      0.5.4
 // @description  Warns about unsafe/scammy links based on FMHY filterlist
 // @author       maxikozie
 // @match        *://*/*
