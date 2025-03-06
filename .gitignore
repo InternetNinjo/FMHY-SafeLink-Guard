@@ -1,0 +1,53 @@
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Editor folders/files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.pssproj
+
+# Node (just in case you ever script tooling)
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Mac/Linux files
+._*
+.AppleDouble
+.LSOverride
+
+# Windows
+desktop.ini
+
+# Backup files
+*.bak
+*.swp
+*.swo
+*.tmp
+
+# Ignore any local notes or testing files you create
+local-notes.txt
+testing/
+
+# Ignore personal zips or backups
+*.zip
+*.tar
+*.tgz
+*.gz
+*.rar
+
+# If you use GitHub Codespaces or devcontainers
+.devcontainer/
+
+# Ignore all hidden dotfiles that aren't needed
+.*~
