@@ -37,6 +37,7 @@ desktop.ini
 
 # Ignore any local notes or testing files you create
 local-notes.txt
+TODO.txt
 testing/
 
 # Ignore personal zips or backups
