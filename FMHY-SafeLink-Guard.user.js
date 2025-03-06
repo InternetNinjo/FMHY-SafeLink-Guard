@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FMHY SafeLink Guard
 // @namespace    http://tampermonkey.net/
-// @version      0.5.1
+// @version      0.5.2
 // @description  Warns about unsafe/scammy links based on FMHY filterlist
 // @author       maxikozie
 // @match        *://*/*
@@ -13,29 +13,37 @@
 // @run-at       document-end
 // @license      MIT
 // @icon         https://fmhy.net/fmhy.ico
-// @downloadURL  https://update.greasyfork.org/scripts/528660/FMHY%20SafeLink%20Guard.user.js
-// @updateURL    https://update.greasyfork.org/scripts/528660/FMHY%20SafeLink%20Guard.meta.js
+// @downloadURL https://update.greasyfork.org/scripts/528660/FMHY%20SafeLink%20Guard.user.js
+// @updateURL https://update.greasyfork.org/scripts/528660/FMHY%20SafeLink%20Guard.meta.js
 // ==/UserScript==
 
 (function() {
     'use strict';
 
+    // Remote sources for FMHY site lists
     const unsafeListUrl = 'https://raw.githubusercontent.com/fmhy/FMHYFilterlist/refs/heads/main/sitelist.txt';
-    const safeListUrl = 'https://raw.githubusercontent.com/fmhy/bookmarks/refs/heads/main/fmhy_in_bookmarks.html';
+    const safeListUrl   = 'https://raw.githubusercontent.com/fmhy/bookmarks/refs/heads/main/fmhy_in_bookmarks.html';
 
     const unsafeDomains = new Set();
-    const safeDomains = new Set();
+    const safeDomains   = new Set();
 
-    const userAdditions = [];
-    const userRemovals = [];
+    // User-defined overrides and settings
+    const userTrusted   = new Set(GM_getValue('userTrusted', []));
+    const userUntrusted = new Set(GM_getValue('userUntrusted', []));
 
+    const settings = {
+        highlightTrusted:   GM_getValue('highlightTrusted', true),
+        highlightUntrusted: GM_getValue('highlightUntrusted', true),
+        showWarningBanners: GM_getValue('showWarningBanners', true)
+    };
+
+    // Tracking for processed links and counters per domain
     const processedLinks = new WeakSet();
-    const highlightedUnsafeCounts = new Map();
-    const highlightedSafeCounts = new Map();
+    const highlightCountTrusted = new Map();
+    const highlightCountUntrusted = new Map();
+    const banneredDomains = new Set();
 
-    const trustedGlow = '0 0 4px #32cd32';
-    const unsafeGlow = '0 0 4px #ff4444';
-
+    // Style for the warning banner
     const warningStyle = `
         background-color: #ff0000;
         color: #fff;
@@ -47,206 +55,194 @@
         z-index: 9999;
     `;
 
-    // Load settings
-    let settings = {
-        highlightTrusted: GM_getValue('highlightTrusted', true),
-        highlightUntrusted: GM_getValue('highlightUntrusted', true),
-        highlightWarningBanners: GM_getValue('highlightWarningBanners', true) // NEW TOGGLES
-    };
-
-    // Register settings menu
     GM_registerMenuCommand('⚙️ FMHY SafeLink Guard Settings', openSettingsPanel);
 
-    fetchUnsafeDomains();
+    fetchRemoteLists();
 
-    function fetchUnsafeDomains() {
+    function fetchRemoteLists() {
         GM_xmlhttpRequest({
             method: 'GET',
             url: unsafeListUrl,
             onload: response => {
                 parseDomainList(response.responseText, unsafeDomains);
-                applyUserCustomDomains();
-                fetchSafeDomains();
-            },
-            onerror: () => {
-                console.error('[FMHY Guard] Failed to fetch unsafe list');
-                fetchSafeDomains();
-            }
-        });
-    }
 
-    function fetchSafeDomains() {
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: safeListUrl,
-            onload: response => {
-                parseSafeDomains(response.responseText);
-                markLinksIn(document.body);
-                observePageChanges();
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: safeListUrl,
+                    onload: safeResp => {
+                        parseSafeList(safeResp.responseText);
+                        applyUserOverrides();
+                        processPage();
+                    },
+                    onerror: processPage
+                });
             },
-            onerror: () => {
-                console.error('[FMHY Guard] Failed to fetch safe list');
-                markLinksIn(document.body);
-                observePageChanges();
-            }
+            onerror: processPage
         });
     }
 
     function parseDomainList(text, targetSet) {
         text.split('\n').forEach(line => {
-            const domain = line.trim();
-            if (domain && !domain.startsWith('!')) targetSet.add(domain.toLowerCase());
+            const domain = line.trim().toLowerCase();
+            if (domain && !domain.startsWith('!')) targetSet.add(domain);
         });
     }
 
-    function applyUserCustomDomains() {
-        userAdditions.forEach(d => unsafeDomains.add(d.toLowerCase()));
-        userRemovals.forEach(d => unsafeDomains.delete(d.toLowerCase()));
-    }
-
-    function parseSafeDomains(html) {
+    function parseSafeList(html) {
         const doc = new DOMParser().parseFromString(html, 'text/html');
         doc.querySelectorAll('a[href]').forEach(link => {
-            try {
-                safeDomains.add(normalizeDomain(new URL(link.href).hostname));
-            } catch (e) {}
+            const domain = normalizeDomain(new URL(link.href).hostname);
+            safeDomains.add(domain);
         });
     }
 
-    const banneredDomains = new Set();
+    function applyUserOverrides() {
+        userTrusted.forEach(domain => {
+            safeDomains.add(domain);
+            unsafeDomains.delete(domain);
+        });
 
-    function markLinksIn(container) {
-        const links = container.querySelectorAll('a[href]');
-        for (const link of links) {
-            if (processedLinks.has(link)) continue;
+        userUntrusted.forEach(domain => {
+            unsafeDomains.add(domain);
+            safeDomains.delete(domain);
+        });
+    }
+
+    function processPage() {
+        markLinks(document.body);
+        observePage();
+    }
+
+    function markLinks(container) {
+        container.querySelectorAll('a[href]').forEach(link => {
+            if (processedLinks.has(link)) return;
             processedLinks.add(link);
 
-            const domain = normalizeDomain(new URL(link.href, location.href).hostname);
+            const domain = normalizeDomain(new URL(link.href).hostname);
 
-            if (isUnsafe(domain)) {
-                // Show the banner only if enabled and once per domain
-                if (settings.highlightWarningBanners && !banneredDomains.has(domain)) {
-                    addWarning(link);
+            if (userUntrusted.has(domain) || (!userTrusted.has(domain) && unsafeDomains.has(domain))) {
+                if (settings.highlightUntrusted && getHighlightCount(highlightCountUntrusted, domain) < 2) {
+                    highlightLink(link, 'red');
+                    incrementHighlightCount(highlightCountUntrusted, domain);
+                }
+                if (settings.showWarningBanners && !banneredDomains.has(domain)) {
+                    addWarningBanner(link);
                     banneredDomains.add(domain);
                 }
-
-                // Highlight only if user wants
-                if (settings.highlightUntrusted && (highlightedUnsafeCounts.get(domain) || 0) < 2) {
-                    highlightUnsafeLink(link);
-                    highlightedUnsafeCounts.set(domain, (highlightedUnsafeCounts.get(domain) || 0) + 1);
-                }
-            } else if (settings.highlightTrusted && isSafe(domain)) {
-                if ((highlightedSafeCounts.get(domain) || 0) < 2) {
-                    highlightTrustedLink(link);
-                    highlightedSafeCounts.set(domain, (highlightedSafeCounts.get(domain) || 0) + 1);
+            } else if (userTrusted.has(domain) || safeDomains.has(domain)) {
+                if (settings.highlightTrusted && getHighlightCount(highlightCountTrusted, domain) < 2) {
+                    highlightLink(link, 'green');
+                    incrementHighlightCount(highlightCountTrusted, domain);
                 }
             }
-        }
+        });
     }
 
-    function highlightTrustedLink(link) {
-        link.style.textShadow = trustedGlow;
+    function observePage() {
+        new MutationObserver(mutations => {
+            for (const {addedNodes} of mutations) {
+                for (const node of addedNodes) {
+                    if (node.nodeType === Node.ELEMENT_NODE) markLinks(node);
+                }
+            }
+        }).observe(document.body, {childList: true, subtree: true});
+    }
+
+    function highlightLink(link, color) {
+        link.style.textShadow = `0 0 4px ${color}`;
         link.style.fontWeight = 'bold';
     }
 
-    function highlightUnsafeLink(link) {
-        link.style.textShadow = unsafeGlow;
-        link.style.fontWeight = 'bold';
-    }
-
-    function addWarning(link) {
+    function addWarningBanner(link) {
         const warning = document.createElement('span');
         warning.textContent = '⚠️ FMHY Unsafe Site';
         warning.style = warningStyle;
         link.after(warning);
     }
 
-    function isUnsafe(domain) {
-        return domainMatch(domain, unsafeDomains);
-    }
-
-    function isSafe(domain) {
-        return domainMatch(domain, safeDomains);
-    }
-
-    function domainMatch(domain, set) {
-        return [...set].some(d => domain === d || domain.endsWith('.' + d));
-    }
-
     function normalizeDomain(hostname) {
         return hostname.replace(/^www\./, '').toLowerCase();
     }
 
-    function observePageChanges() {
-        new MutationObserver(mutations => {
-            for (const {addedNodes} of mutations) {
-                for (const node of addedNodes) {
-                    if (node.nodeType === Node.ELEMENT_NODE) markLinksIn(node);
-                }
-            }
-        }).observe(document.body, {childList: true, subtree: true});
+    function getHighlightCount(map, domain) {
+        return map.get(domain) || 0;
+    }
+
+    function incrementHighlightCount(map, domain) {
+        map.set(domain, getHighlightCount(map, domain) + 1);
     }
 
     function openSettingsPanel() {
-        document.getElementById('fmhy-settings-panel')?.remove();
+        const existingPanel = document.getElementById('fmhy-settings-panel');
+        if (existingPanel) existingPanel.remove();
 
         const panel = document.createElement('div');
         panel.id = 'fmhy-settings-panel';
         panel.style = `
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 99999; font-family: sans-serif; font-size: 14px;
-            background: #222; color: #f5f5f5; padding: 20px;
-            border: 1px solid #444; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-            width: 320px;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 999999;
+            background: #222;
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: sans-serif;
+            font-size: 14px;
+            width: 450px;
+            max-height: 80vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
         `;
 
         panel.innerHTML = `
-            <div style="font-weight: bold; font-size: 16px; margin-bottom: 10px;">
-                ⚙️ FMHY SafeLink Guard Settings
-            </div>
+            <h3 style="margin-top: 0; text-align: center;">⚙️ FMHY SafeLink Guard Settings</h3>
 
-            <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
-                <label>Highlight Trusted Domains</label>
-                <input type="checkbox" id="highlightTrusted">
-            </div>
+            <label><input type="checkbox" id="highlightTrusted"> 🟢 Highlight Trusted Links</label><br>
+            <label><input type="checkbox" id="highlightUntrusted"> 🔴 Highlight Untrusted Links</label><br>
+            <label><input type="checkbox" id="showWarningBanners"> ⚠️ Show Warning Banners</label><br><br>
 
-            <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
-                <label>Highlight Untrusted Domains</label>
-                <input type="checkbox" id="highlightUntrusted">
-            </div>
+            <label>Trusted Domains (1 per line):</label>
+            <textarea id="trustedList" style="width: 100%; height: 80px;"></textarea><br><br>
 
-            <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-                <label>Show Warning Banners</label>
-                <input type="checkbox" id="highlightWarningBanners">
-            </div>
+            <label>Untrusted Domains (1 per line):</label>
+            <textarea id="untrustedList" style="width: 100%; height: 80px;"></textarea><br><br>
 
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button id="saveSettings" style="
-                    background: #28a745; color: white; border: none; padding: 6px 12px;
-                    border-radius: 6px; cursor: pointer; font-weight: bold;">Save</button>
-                <button id="closeSettings" style="
-                    background: #dc3545; color: white; border: none; padding: 6px 12px;
-                    border-radius: 6px; cursor: pointer;">Close</button>
-            </div>
+            <button id="saveSettings" style="background:#28a745;color:white;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;">Save</button>
+            <button id="closeSettings" style="background:#dc3545;color:white;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;margin-left:10px;">Close</button>
         `;
 
         document.body.appendChild(panel);
 
         document.getElementById('highlightTrusted').checked = settings.highlightTrusted;
         document.getElementById('highlightUntrusted').checked = settings.highlightUntrusted;
-        document.getElementById('highlightWarningBanners').checked = settings.highlightWarningBanners;
+        document.getElementById('showWarningBanners').checked = settings.showWarningBanners;
+
+        document.getElementById('trustedList').value = [...userTrusted].join('\n');
+        document.getElementById('untrustedList').value = [...userUntrusted].join('\n');
 
         document.getElementById('saveSettings').onclick = () => {
-            settings.highlightTrusted = document.getElementById('highlightTrusted').checked;
-            settings.highlightUntrusted = document.getElementById('highlightUntrusted').checked;
-            settings.highlightWarningBanners = document.getElementById('highlightWarningBanners').checked;
-            GM_setValue('highlightTrusted', settings.highlightTrusted);
-            GM_setValue('highlightUntrusted', settings.highlightUntrusted);
-            GM_setValue('highlightWarningBanners', settings.highlightWarningBanners);
-            panel.remove();
+            saveSettings();
             location.reload();
         };
 
         document.getElementById('closeSettings').onclick = () => panel.remove();
+    }
+
+    function saveSettings() {
+        ['highlightTrusted', 'highlightUntrusted', 'showWarningBanners'].forEach(setting => {
+            settings[setting] = document.getElementById(setting).checked;
+            GM_setValue(setting, settings[setting]);
+        });
+
+        saveDomainList('trustedList', userTrusted);
+        saveDomainList('untrustedList', userUntrusted);
+    }
+
+    function saveDomainList(id, set) {
+        set.clear();
+        document.getElementById(id).value.split('\n').map(d => d.trim().toLowerCase()).filter(Boolean).forEach(d => set.add(d));
+        GM_setValue(id.replace('List', ''), [...set]);
     }
 })();
