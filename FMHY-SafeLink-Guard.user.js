@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         FMHY SafeLink Guard TEST
+// @name         FMHY SafeLink Guard
 // @namespace    http://tampermonkey.net/
 // @version      0.5.4
 // @description  Warns about unsafe/scammy links based on FMHY filterlist
