@@ -50,7 +50,9 @@
     const settings = {
         highlightTrusted:   GM_getValue('highlightTrusted', true),
         highlightUntrusted: GM_getValue('highlightUntrusted', true),
-        showWarningBanners: GM_getValue('showWarningBanners', true)
+        showWarningBanners: GM_getValue('showWarningBanners', true),
+        trustedColor:       GM_getValue('trustedColor', '#32cd32'),  // Default green
+        untrustedColor:     GM_getValue('untrustedColor', '#ff4444') // Default red
     };
 
     // Tracking for processed links and counters per domain
@@ -142,12 +144,12 @@
         container.querySelectorAll('a[href]').forEach(link => {
             if (processedLinks.has(link)) return;
             processedLinks.add(link);
-
+    
             const domain = normalizeDomain(new URL(link.href).hostname);
-
+    
             if (userUntrusted.has(domain) || (!userTrusted.has(domain) && unsafeDomains.has(domain))) {
                 if (settings.highlightUntrusted && getHighlightCount(highlightCountUntrusted, domain) < 2) {
-                    highlightLink(link, 'red');
+                    highlightLink(link, 'untrusted');  // <- FIXED
                     incrementHighlightCount(highlightCountUntrusted, domain);
                 }
                 if (settings.showWarningBanners && !banneredDomains.has(domain)) {
@@ -156,12 +158,13 @@
                 }
             } else if (userTrusted.has(domain) || safeDomains.has(domain)) {
                 if (settings.highlightTrusted && getHighlightCount(highlightCountTrusted, domain) < 2) {
-                    highlightLink(link, 'green');
+                    highlightLink(link, 'trusted');  // <- FIXED
                     incrementHighlightCount(highlightCountTrusted, domain);
                 }
             }
         });
     }
+    
 
     function observePage() {
         new MutationObserver(mutations => {
@@ -173,10 +176,11 @@
         }).observe(document.body, {childList: true, subtree: true});
     }
 
-    function highlightLink(link, color) {
+    function highlightLink(link, type) {
+        const color = (type === 'trusted') ? settings.trustedColor : settings.untrustedColor;
         link.style.textShadow = `0 0 4px ${color}`;
         link.style.fontWeight = 'bold';
-    }
+    }    
 
     function addWarningBanner(link) {
         const warning = document.createElement('span');
@@ -197,70 +201,21 @@
         map.set(domain, getHighlightCount(map, domain) + 1);
     }
 
-    function openSettingsPanel() {
-        const existingPanel = document.getElementById('fmhy-settings-panel');
-        if (existingPanel) existingPanel.remove();
-
-        const panel = document.createElement('div');
-        panel.id = 'fmhy-settings-panel';
-        panel.style = `
-            position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 999999;
-            background: #222;
-            color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            font-family: sans-serif;
-            font-size: 14px;
-            width: 450px;
-            max-height: 80vh;
-            overflow-y: auto;
-            overflow-x: hidden;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-        `;
-
-        panel.innerHTML = `
-            <h3 style="margin-top: 0; text-align: center;">⚙️ FMHY SafeLink Guard Settings</h3>
-
-            <label><input type="checkbox" id="highlightTrusted"> 🟢 Highlight Trusted Links</label><br>
-            <label><input type="checkbox" id="highlightUntrusted"> 🔴 Highlight Untrusted Links</label><br>
-            <label><input type="checkbox" id="showWarningBanners"> ⚠️ Show Warning Banners</label><br><br>
-
-            <label>Trusted Domains (1 per line):</label>
-            <textarea id="trustedList" style="width: 100%; height: 80px;"></textarea><br><br>
-
-            <label>Untrusted Domains (1 per line):</label>
-            <textarea id="untrustedList" style="width: 100%; height: 80px;"></textarea><br><br>
-
-            <button id="saveSettings" style="background:#28a745;color:white;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;">Save</button>
-            <button id="closeSettings" style="background:#dc3545;color:white;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;margin-left:10px;">Close</button>
-        `;
-
-        document.body.appendChild(panel);
-
-        document.getElementById('highlightTrusted').checked = settings.highlightTrusted;
-        document.getElementById('highlightUntrusted').checked = settings.highlightUntrusted;
-        document.getElementById('showWarningBanners').checked = settings.showWarningBanners;
-
-        document.getElementById('trustedList').value = [...userTrusted].join('\n');
-        document.getElementById('untrustedList').value = [...userUntrusted].join('\n');
-
-        document.getElementById('saveSettings').onclick = () => {
-            saveSettings();
-            location.reload();
-        };
-
-        document.getElementById('closeSettings').onclick = () => panel.remove();
-    }
-
     function saveSettings() {
-        ['highlightTrusted', 'highlightUntrusted', 'showWarningBanners'].forEach(setting => {
-            settings[setting] = document.getElementById(setting).checked;
-            GM_setValue(setting, settings[setting]);
-        });
-
+        settings.highlightTrusted = document.getElementById('highlightTrusted').checked;
+        settings.highlightUntrusted = document.getElementById('highlightUntrusted').checked;
+        settings.showWarningBanners = document.getElementById('showWarningBanners').checked;
+    
+        settings.trustedColor = document.getElementById('trustedColor').value;
+        settings.untrustedColor = document.getElementById('untrustedColor').value;
+    
+        GM_setValue('highlightTrusted', settings.highlightTrusted);
+        GM_setValue('highlightUntrusted', settings.highlightUntrusted);
+        GM_setValue('showWarningBanners', settings.showWarningBanners);
+    
+        GM_setValue('trustedColor', settings.trustedColor);
+        GM_setValue('untrustedColor', settings.untrustedColor);
+    
         saveDomainList('trustedList', userTrusted);
         saveDomainList('untrustedList', userUntrusted);
     }
@@ -270,4 +225,80 @@
         document.getElementById(id).value.split('\n').map(d => d.trim().toLowerCase()).filter(Boolean).forEach(d => set.add(d));
         GM_setValue(id.replace('List', ''), [...set]);
     }
+
+    function openSettingsPanel() {
+        const existingPanel = document.getElementById('fmhy-settings-panel');
+        if (existingPanel) existingPanel.remove();
+    
+        const panel = document.createElement('div');
+        panel.id = 'fmhy-settings-panel';
+        panel.style = `
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: #222;
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: sans-serif;
+            font-size: 14px;
+            z-index: 99999;
+            width: 450px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        `;
+    
+        panel.innerHTML = `
+            <h3 style="text-align:center; margin:0 0 15px;">⚙️ FMHY SafeLink Guard Settings</h3>
+    
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <input type="checkbox" id="highlightTrusted" style="margin-right: 6px;">
+                <label for="highlightTrusted" style="flex-grow: 1; cursor: pointer;"> 🟢 Highlight Trusted Links</label>
+                <input type="color" id="trustedColor" style="width: 30px; height: 20px; padding: 0; border: none; cursor: pointer;">
+            </div>
+    
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <input type="checkbox" id="highlightUntrusted" style="margin-right: 6px;">
+                <label for="highlightUntrusted" style="flex-grow: 1; cursor: pointer;"> 🔴 Highlight Untrusted Links</label>
+                <input type="color" id="untrustedColor" style="width: 30px; height: 20px; padding: 0; border: none; cursor: pointer;">
+            </div>
+    
+            <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <input type="checkbox" id="showWarningBanners" style="margin-right: 6px;">
+                <label for="showWarningBanners" style="flex-grow: 1; cursor: pointer;"> ⚠️ Show Warning Banners</label>
+            </div>
+    
+            <label style="display: block; margin-bottom: 5px;">Trusted Domains (1 per line):</label>
+            <textarea id="trustedList" style="width: 100%; height: 80px; margin-bottom: 10px;"></textarea>
+    
+            <label style="display: block; margin-bottom: 5px;">Untrusted Domains (1 per line):</label>
+            <textarea id="untrustedList" style="width: 100%; height: 80px; margin-bottom: 10px;"></textarea>
+    
+            <div style="text-align: left;">
+                <button id="saveSettingsBtn" onclick="saveSettingsAndClose()" style="background:#28a745;color:white;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;">Save</button>
+                <button onclick="document.getElementById('fmhy-settings-panel').remove()" style="background:#dc3545;color:white;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;margin-left:10px;">Close</button>
+            </div>
+
+        `;
+    
+        document.body.appendChild(panel);
+    
+        document.getElementById('highlightTrusted').checked = settings.highlightTrusted;
+        document.getElementById('highlightUntrusted').checked = settings.highlightUntrusted;
+        document.getElementById('showWarningBanners').checked = settings.showWarningBanners;
+    
+        document.getElementById('trustedColor').value = settings.trustedColor;
+        document.getElementById('untrustedColor').value = settings.untrustedColor;
+    
+        document.getElementById('trustedList').value = [...userTrusted].join('\n');
+        document.getElementById('untrustedList').value = [...userUntrusted].join('\n');
+    
+        document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+            saveSettings();
+            panel.remove();
+            location.reload();
+        });
+    }
+    
 })();
