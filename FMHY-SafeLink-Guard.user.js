@@ -277,13 +277,13 @@
     
             <div style="text-align: left;">
                 <button id="saveSettingsBtn" onclick="saveSettingsAndClose()" style="background:#28a745;color:white;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;">Save</button>
-                <button onclick="document.getElementById('fmhy-settings-panel').remove()" style="background:#dc3545;color:white;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;margin-left:10px;">Close</button>
+                <button id="closeSettingsBtn" style="background:#dc3545;color:white;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;margin-left:10px;">Close</button>
             </div>
 
         `;
     
         document.body.appendChild(panel);
-    
+
         document.getElementById('highlightTrusted').checked = settings.highlightTrusted;
         document.getElementById('highlightUntrusted').checked = settings.highlightUntrusted;
         document.getElementById('showWarningBanners').checked = settings.showWarningBanners;
@@ -298,6 +298,10 @@
             saveSettings();
             panel.remove();
             location.reload();
+        });
+
+        document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+            panel.remove();
         });
     }
     
