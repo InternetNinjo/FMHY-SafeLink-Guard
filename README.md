@@ -2,6 +2,22 @@
 
 **FMHY SafeLink Guard** keeps a lookout for potentially harmful or scammy links on any website you visit. Drawing on the up-to-date FMHY sitelist and bookmarks, it flags these links directly on the webpage and highlights safe and unsafe domains, giving you a clear visual signal about the trustworthiness of each link.
 
+## Installation Instructions
+
+1. **Install a User Script Manager**  
+   - **Chrome:** [Violentmonkey](https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag) (RECOMMENDED) 
+     - Due to changes from the **Manifest V3 update**, some extensions work differently.
+     - If you choose **Tampermonkey**, you’ll need to manually enable **Developer Mode** in Chrome.  
+     - ⚠️ Note: Even Violentmonkey shows a warning that future Chrome updates might break functionality.
+   - **Firefox:** [Tampermonkey](https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/) or [Violentmonkey](https://addons.mozilla.org/en-US/firefox/addon/violentmonkey/).  
+
+2. **Add the FMHY SafeLink Guard Script**  
+   - Open the script’s [hosting page](https://greasyfork.org/en/scripts/528660-fmhy-safelink-guard) (Greasy Fork)  
+   - Click **Install** or **Import** to add it to your user script manager.  
+
+3. **Verify Activation**  
+   - Check your user script manager’s dashboard to confirm “FMHY SafeLink Guard” is running.
+
 ## Key Features
 
 - **Fresh Data:** Uses the latest FMHY sitelist (unsafe sites) and fmhy_in_bookmarks.html (trusted sites), fetching updates on every run.  
@@ -19,22 +35,6 @@
 - **Visual Clarity:** Instantly spot trusted or risky links via colored highlights.  
 - **Automatic Updates:** Pulls the domain lists directly from FMHY’s GitHub, so you’re always up-to-date.  
 - **Customizable:** Toggle individual features to match your browsing preferences.
-
-## Installation Instructions
-
-1. **Install a User Script Manager**  
-   - **Chrome:** [Violentmonkey](https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag) (RECOMMENDED) 
-     - Due to changes from the **Manifest V3 update**, some extensions work differently.
-     - If you choose **Tampermonkey**, you’ll need to manually enable **Developer Mode** in Chrome.  
-     - ⚠️ Note: Even Violentmonkey shows a warning that future Chrome updates might break functionality.
-   - **Firefox:** [Tampermonkey](https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/) or [Violentmonkey](https://addons.mozilla.org/en-US/firefox/addon/violentmonkey/).  
-
-2. **Add the FMHY SafeLink Guard Script**  
-   - Open the script’s [hosting page](https://greasyfork.org/en/scripts/528660-fmhy-safelink-guard) (Greasy Fork)  
-   - Click **Install** or **Import** to add it to your user script manager.  
-
-3. **Verify Activation**  
-   - Check your user script manager’s dashboard to confirm “FMHY SafeLink Guard” is running.
 
 ## Usage
 
