@@ -24,10 +24,13 @@
 - **Visual Warning:** Displays a prominent red warning banner `⚠️ FMHY Unsafe Site` next to flagged links (only once per domain).  
 - **Safe and Unsafe Highlights:** Safe (trusted) domains can be highlighted in **green**, while unsafe (flagged) domains can be highlighted in **red**.  
 - **Dynamic Content Support:** Includes a MutationObserver to track pages that load content dynamically, ensuring newly added links don’t go unnoticed.  
-- **User Control:** A settings menu (accessible via the userscript menu) allows you to **toggle** the following:  
-    - Highlighting trusted domains (green glow).  
-    - Highlighting untrusted domains (red glow).  
-    - Displaying the warning banner for unsafe sites.
+- **User Control:** A settings menu (accessible via the userscript menu) allows you to:
+    - **Toggle** the following:
+        - Highlighting trusted domains (with a customizable glow color).  
+        - Highlighting untrusted domains (with a customizable glow color).  
+        - Displaying the warning banner for unsafe sites.
+    - **Customize colors** directly from the settings panel, choosing your preferred highlight colors for trusted and untrusted links.
+    - Manage your personal **Trusted Domains** and **Untrusted Domains** lists, overriding FMHY’s own lists if needed.
 
 ## Why Use It?
 
