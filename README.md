@@ -20,10 +20,13 @@
 - **Automatic Updates:** Pulls the domain lists directly from FMHY’s GitHub, so you’re always up-to-date.  
 - **Customizable:** Toggle individual features to match your browsing preferences.
 
-## Installation
+## Installation Instructions
 
 1. **Install a User Script Manager**  
-   - **Chrome:** [Tampermonkey](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) (recommended).  
+   - **Chrome:** [Violentmonkey](https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag) (RECOMMENDED) 
+     - Due to changes from the **Manifest V3 update**, some extensions work differently.
+     - If you choose **Tampermonkey**, you’ll need to manually enable **Developer Mode** in Chrome.  
+     - ⚠️ Note: Even Violentmonkey shows a warning that future Chrome updates might break functionality.
    - **Firefox:** [Tampermonkey](https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/) or [Violentmonkey](https://addons.mozilla.org/en-US/firefox/addon/violentmonkey/).  
 
 2. **Add the FMHY SafeLink Guard Script**  
