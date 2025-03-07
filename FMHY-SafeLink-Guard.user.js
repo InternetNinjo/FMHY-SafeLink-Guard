@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         FMHY SafeLink Guard
+// @name         FMHY SafeLink Guard TEST
 // @namespace    http://tampermonkey.net/
 // @version      0.5.4
 // @description  Warns about unsafe/scammy links based on FMHY filterlist
@@ -44,8 +44,8 @@
     const safeDomains   = new Set();
 
     // User-defined overrides and settings
-    const userTrusted   = new Set(GM_getValue('userTrusted', []));
-    const userUntrusted = new Set(GM_getValue('userUntrusted', []));
+    const userTrusted   = new Set(GM_getValue('trusted', []));
+    const userUntrusted = new Set(GM_getValue('untrusted', []));
 
     const settings = {
         highlightTrusted:   GM_getValue('highlightTrusted', true),
