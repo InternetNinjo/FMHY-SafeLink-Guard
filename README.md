@@ -23,7 +23,7 @@
 
 ## Key Features
 
-- **Caching System (New in v0.5.5):**
+- **Caching System:**
 
   - FMHY SafeLink Guard now **caches** its safe and unsafe domain lists for **one week** to reduce unnecessary fetches.
   - Cache is stored using Tampermonkey’s `GM_setValue` and can be force-refreshed anytime.
@@ -32,7 +32,7 @@
 
   - Users can manually clear and reload FMHY’s lists using the **“Force Update FMHY Lists”** menu command.
 
-- **Download Cached Data (New in v0.5.5):**
+- **Download Cached Data:**
 
   - Users can download all cached domain lists as a **JSON file** via the **“Download All Caches”** menu command.
   - Helps with debugging and external analysis.
