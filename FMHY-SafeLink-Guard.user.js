@@ -84,34 +84,45 @@
 
     GM_registerMenuCommand('⚙️ FMHY SafeLink Guard Settings', openSettingsPanel);
 
-    // Provide a manual "Force Update" command
     GM_registerMenuCommand('🔄 Force Update FMHY Lists', () => {
         GM_deleteValue(CACHE_KEYS.UNSAFE);
         GM_deleteValue(CACHE_KEYS.SAFE);
         alert('FMHY lists cache cleared. The script will fetch fresh data now or on next page load.');
-        // Optionally call fetchRemoteLists() right away
         fetchRemoteLists();
     });
 
-    GM_registerMenuCommand("📂 Download Safe Cache", function() {
-        downloadSafeCache();
+    GM_registerMenuCommand("📂 Download All Caches", function() {
+        downloadAllCaches();
     });
 
-    function downloadSafeCache() {
-        const safeData = GM_getValue('fmhy-safeCache');
-        if (!safeData) {
-            alert("No safe cache data found.");
+
+    function downloadAllCaches() {
+        // Grab both caches from storage
+        const unsafeData = GM_getValue(CACHE_KEYS.UNSAFE, null);
+        const safeData   = GM_getValue(CACHE_KEYS.SAFE, null);
+
+        // If neither cache is found, no point in downloading
+        if (!unsafeData && !safeData) {
+            alert("No cache data found for either safe or unsafe.");
             return;
         }
 
-        const blob = new Blob([JSON.stringify(safeData, null, 2)], { type: 'application/json' });
+        // Combine them in a single JSON object
+        const combinedData = {
+            unsafeCache: unsafeData,
+            safeCache: safeData
+        };
+
+        // Create a blob from the combined JSON
+        const blob = new Blob([JSON.stringify(combinedData, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'fmhy-safeCache.json';
+        a.download = 'fmhy-all-caches.json';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
     }
+
 
     function isValidCache(cacheKey) {
         const cached = GM_getValue(cacheKey, null);
@@ -137,7 +148,7 @@
     function incrementHighlightCount(map, domain) {
         if (map.size > 1000) map.clear(); // Reset if too large
         map.set(domain, getHighlightCount(map, domain) + 1);
-    }    
+    }
 
     function fetchUnsafeList(now) {
         GM_xmlhttpRequest({
@@ -419,5 +430,5 @@
 
     console.log(`[FMHY Guard] Unsafe Domains: ${unsafeDomains.size}, Safe Domains: ${safeDomains.size}`);
     console.log(`[FMHY Guard] Cache Size: ${JSON.stringify(GM_getValue(CACHE_KEYS.UNSAFE)).length} bytes`);
-    
+
 })();
