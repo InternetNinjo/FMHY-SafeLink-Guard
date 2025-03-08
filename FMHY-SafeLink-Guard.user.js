@@ -18,6 +18,7 @@
 // @updateURL    https://update.greasyfork.org/scripts/528660/FMHY%20SafeLink%20Guard.meta.js
 // ==/UserScript==
 
+
 (function() {
     'use strict';
 
@@ -38,8 +39,8 @@
     }
 
     // Remote sources for FMHY site lists
-    const unsafeListUrl = 'https://raw.githubusercontent.com/fmhy/FMHYFilterlist/refs/heads/main/sitelist.txt';
-    const safeListUrl   = 'https://raw.githubusercontent.com/fmhy/bookmarks/refs/heads/main/fmhy_in_bookmarks.html';
+    const unsafeListUrl = 'https://raw.githubusercontent.com/fmhy/FMHYFilterlist/main/sitelist.txt';
+    const safeListUrl   = 'https://raw.githubusercontent.com/fmhy/bookmarks/main/fmhy_in_bookmarks.html';
 
     const unsafeDomains = new Set();
     const safeDomains   = new Set();
@@ -92,15 +93,40 @@
         fetchRemoteLists();
     });
 
+    GM_registerMenuCommand("📂 Download Safe Cache", function() {
+        downloadSafeCache();
+    });
+
+    function downloadSafeCache() {
+        const safeData = GM_getValue('fmhy-safeCache');
+        if (!safeData) {
+            alert("No safe cache data found.");
+            return;
+        }
+
+        const blob = new Blob([JSON.stringify(safeData, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'fmhy-safeCache.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function isValidCache(cacheKey) {
+        const cached = GM_getValue(cacheKey, null);
+        return cached && cached.timestamp && cached.data && typeof cached.data === 'string';
+    }
+
     // Fetch remote list with 1 week cacheing
     fetchRemoteLists();
 
     function fetchRemoteLists() {
         const now = Date.now();
-        const cachedUnsafe = GM_getValue(CACHE_KEYS.UNSAFE, null);
 
-        if (cachedUnsafe && (now - cachedUnsafe.timestamp < CACHE_TIME)) {
-            parseDomainList(cachedUnsafe.data, unsafeDomains);
+        if (isValidCache(CACHE_KEYS.UNSAFE) && (now - GM_getValue(CACHE_KEYS.UNSAFE).timestamp < CACHE_TIME)) {
+            const cached = GM_getValue(CACHE_KEYS.UNSAFE);
+            parseDomainList(cached.data, unsafeDomains);
             console.log(`[FMHY Guard] Loaded ${unsafeDomains.size} unsafe domains from cache`);
             loadSafeList(now);
         } else {
@@ -108,26 +134,31 @@
         }
     }
 
+    function incrementHighlightCount(map, domain) {
+        if (map.size > 1000) map.clear(); // Reset if too large
+        map.set(domain, getHighlightCount(map, domain) + 1);
+    }    
+
     function fetchUnsafeList(now) {
         GM_xmlhttpRequest({
             method: 'GET',
             url: unsafeListUrl,
             onload: response => {
+                if (response.status !== 200 || !response.responseText) {
+                    console.error("[FMHY Guard] Invalid response from server. Using stale cache.");
+                    loadSafeList(now);
+                    return;
+                }
                 const data = response.responseText;
                 parseDomainList(data, unsafeDomains);
-                GM_setValue(CACHE_KEYS.UNSAFE, {
-                    timestamp: now,
-                    data: data
-                });
+                GM_setValue(CACHE_KEYS.UNSAFE, { timestamp: now, data: data });
                 console.log(`[FMHY Guard] Updated unsafe domains cache`);
                 loadSafeList(now);
             },
             onerror: () => {
-                console.error('[FMHY Guard] Using stale unsafe cache (fetch failed)');
+                console.error("[FMHY Guard] Fetch failed, using stale cache.");
                 const cached = GM_getValue(CACHE_KEYS.UNSAFE, null);
-                if (cached) {
-                    parseDomainList(cached.data, unsafeDomains);
-                }
+                if (cached) parseDomainList(cached.data, unsafeDomains);
                 loadSafeList(now);
             }
         });
@@ -231,7 +262,7 @@
                     banneredDomains.add(domain);
                 }
 
-            // Trusted logic
+                // Trusted logic
             } else if (userTrusted.has(domain) || safeDomains.has(domain)) {
                 if (settings.highlightTrusted && getHighlightCount(highlightCountTrusted, domain) < 2) {
                     highlightLink(link, 'trusted');
@@ -385,4 +416,8 @@
             panel.remove();
         });
     }
+
+    console.log(`[FMHY Guard] Unsafe Domains: ${unsafeDomains.size}, Safe Domains: ${safeDomains.size}`);
+    console.log(`[FMHY Guard] Cache Size: ${JSON.stringify(GM_getValue(CACHE_KEYS.UNSAFE)).length} bytes`);
+    
 })();
