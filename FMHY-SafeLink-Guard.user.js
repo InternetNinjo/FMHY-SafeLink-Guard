@@ -2,13 +2,14 @@
 // @name         FMHY SafeLink Guard
 // @namespace    http://tampermonkey.net/
 // @version      0.5.5
-// @description  Warns about unsafe/scammy links based on FMHY filterlist, and skips highlighting internal links on safe domains
+// @description  Warns about unsafe/scammy links based on FMHY filterlist
 // @author       maxikozie
 // @match        *://*/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_deleteValue
 // @connect      raw.githubusercontent.com
 // @run-at       document-end
 // @license      MIT
@@ -43,6 +44,13 @@
     const unsafeDomains = new Set();
     const safeDomains   = new Set();
 
+    // Cached data will be valid for 1 week
+    const CACHE_TIME = 7 * 24 * 60 * 60 * 1000; // 1 week in ms
+    const CACHE_KEYS = {
+        UNSAFE: 'fmhy-unsafeCache',
+        SAFE:   'fmhy-safeCache'
+    };
+
     // User-defined overrides and settings
     const userTrusted   = new Set(GM_getValue('trusted', []));
     const userUntrusted = new Set(GM_getValue('untrusted', []));
@@ -56,10 +64,10 @@
     };
 
     // Tracking for processed links and counters per domain
-    const processedLinks = new WeakSet();
-    const highlightCountTrusted = new Map();
-    const highlightCountUntrusted = new Map();
-    const banneredDomains = new Set();
+    const processedLinks         = new WeakSet();
+    const highlightCountTrusted  = new Map();
+    const highlightCountUntrusted= new Map();
+    const banneredDomains        = new Set();
 
     // Style for the warning banner
     const warningStyle = `
@@ -75,37 +83,95 @@
 
     GM_registerMenuCommand('⚙️ FMHY SafeLink Guard Settings', openSettingsPanel);
 
+    // Provide a manual "Force Update" command
+    GM_registerMenuCommand('🔄 Force Update FMHY Lists', () => {
+        GM_deleteValue(CACHE_KEYS.UNSAFE);
+        GM_deleteValue(CACHE_KEYS.SAFE);
+        alert('FMHY lists cache cleared. The script will fetch fresh data now or on next page load.');
+        // Optionally call fetchRemoteLists() right away
+        fetchRemoteLists();
+    });
+
+    // Fetch remote list with 1 week cacheing
     fetchRemoteLists();
 
     function fetchRemoteLists() {
+        const now = Date.now();
+        const cachedUnsafe = GM_getValue(CACHE_KEYS.UNSAFE, null);
+
+        if (cachedUnsafe && (now - cachedUnsafe.timestamp < CACHE_TIME)) {
+            parseDomainList(cachedUnsafe.data, unsafeDomains);
+            console.log(`[FMHY Guard] Loaded ${unsafeDomains.size} unsafe domains from cache`);
+            loadSafeList(now);
+        } else {
+            fetchUnsafeList(now);
+        }
+    }
+
+    function fetchUnsafeList(now) {
         GM_xmlhttpRequest({
             method: 'GET',
             url: unsafeListUrl,
             onload: response => {
-                parseDomainList(response.responseText, unsafeDomains);
-                console.log(`[FMHY Guard] Loaded ${unsafeDomains.size} unsafe domains from FMHY.`);
-    
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: safeListUrl,
-                    onload: safeResp => {
-                        parseSafeList(safeResp.responseText);
-                        console.log(`[FMHY Guard] Loaded ${safeDomains.size} safe domains from FMHY.`);
-    
-                        applyUserOverrides();
-                        processPage();
-                    },
-                    onerror: response => {
-                        console.error(`[FMHY Guard] Failed to fetch safe list from ${safeListUrl}`, response);
-                        processPage();
-                    }
+                const data = response.responseText;
+                parseDomainList(data, unsafeDomains);
+                GM_setValue(CACHE_KEYS.UNSAFE, {
+                    timestamp: now,
+                    data: data
                 });
+                console.log(`[FMHY Guard] Updated unsafe domains cache`);
+                loadSafeList(now);
             },
-            onerror: response => {
-                console.error(`[FMHY Guard] Failed to fetch unsafe list from ${unsafeListUrl}`, response);
-                processPage();
+            onerror: () => {
+                console.error('[FMHY Guard] Using stale unsafe cache (fetch failed)');
+                const cached = GM_getValue(CACHE_KEYS.UNSAFE, null);
+                if (cached) {
+                    parseDomainList(cached.data, unsafeDomains);
+                }
+                loadSafeList(now);
             }
         });
+    }
+
+    function loadSafeList(now) {
+        const cachedSafe = GM_getValue(CACHE_KEYS.SAFE, null);
+        if (cachedSafe && (now - cachedSafe.timestamp < CACHE_TIME)) {
+            parseSafeList(cachedSafe.data);
+            console.log(`[FMHY Guard] Loaded ${safeDomains.size} safe domains from cache`);
+            finishLoading();
+        } else {
+            fetchSafeList(now);
+        }
+    }
+
+    function fetchSafeList(now) {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: safeListUrl,
+            onload: response => {
+                const data = response.responseText;
+                parseSafeList(data);
+                GM_setValue(CACHE_KEYS.SAFE, {
+                    timestamp: now,
+                    data: data
+                });
+                console.log(`[FMHY Guard] Updated safe domains cache`);
+                finishLoading();
+            },
+            onerror: () => {
+                console.error('[FMHY Guard] Using stale safe cache (fetch failed)');
+                const cached = GM_getValue(CACHE_KEYS.SAFE, null);
+                if (cached) {
+                    parseSafeList(cached.data);
+                }
+                finishLoading();
+            }
+        });
+    }
+
+    function finishLoading() {
+        applyUserOverrides();
+        processPage();
     }
 
     function parseDomainList(text, targetSet) {
@@ -115,8 +181,8 @@
         });
     }
 
-    function parseSafeList(html) {
-        const doc = new DOMParser().parseFromString(html, 'text/html');
+    function parseSafeList(data) {
+        const doc = new DOMParser().parseFromString(data, 'text/html');
         doc.querySelectorAll('a[href]').forEach(link => {
             const domain = normalizeDomain(new URL(link.href).hostname);
             safeDomains.add(domain);
@@ -148,12 +214,13 @@
 
             // If the current site domain is safe AND the link is internal, skip highlight
             if (
-                (safeDomains.has(currentDomain) || userTrusted.has(currentDomain))
-                && domain === currentDomain
+                (safeDomains.has(currentDomain) || userTrusted.has(currentDomain)) &&
+                domain === currentDomain
             ) {
                 return;
             }
 
+            // Untrusted logic
             if (userUntrusted.has(domain) || (!userTrusted.has(domain) && unsafeDomains.has(domain))) {
                 if (settings.highlightUntrusted && getHighlightCount(highlightCountUntrusted, domain) < 2) {
                     highlightLink(link, 'untrusted');
@@ -164,6 +231,7 @@
                     banneredDomains.add(domain);
                 }
 
+            // Trusted logic
             } else if (userTrusted.has(domain) || safeDomains.has(domain)) {
                 if (settings.highlightTrusted && getHighlightCount(highlightCountTrusted, domain) < 2) {
                     highlightLink(link, 'trusted');
@@ -234,7 +302,6 @@
             .filter(Boolean)
             .forEach(dom => set.add(dom));
 
-
         if (id === 'trustedList') {
             GM_setValue('trusted', [...set]);
         } else {
@@ -302,7 +369,7 @@
         document.getElementById('highlightUntrusted').checked = settings.highlightUntrusted;
         document.getElementById('showWarningBanners').checked = settings.showWarningBanners;
 
-        document.getElementById('trustedColor').value = settings.trustedColor;
+        document.getElementById('trustedColor').value   = settings.trustedColor;
         document.getElementById('untrustedColor').value = settings.untrustedColor;
 
         document.getElementById('trustedList').value   = [...userTrusted].join('\n');
