@@ -12,6 +12,7 @@
 // @grant        GM_deleteValue
 // @connect      raw.githubusercontent.com
 // @run-at       document-end
+// @noframes
 // @license      MIT
 // @icon         https://fmhy.net/fmhy.ico
 // @downloadURL  https://update.greasyfork.org/scripts/528660/FMHY%20SafeLink%20Guard.user.js
