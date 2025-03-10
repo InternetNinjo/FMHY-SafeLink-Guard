@@ -15,7 +15,7 @@
 2. **Add the FMHY SafeLink Guard Script**
 
    - Open the script’s [**hosting page**](https://greasyfork.org/en/scripts/528660-fmhy-safelink-guard) (Greasy Fork)
-   - Click **Install** or **Import** to add it to your user script manager.
+   - Click **Install** to add it to your user script manager.
 
 3. **Verify Activation**
 
